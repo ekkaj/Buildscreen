@@ -188,3 +188,5 @@ GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 /OrbitOne.BuildScreen/OrbitOne.BuildScreen/App_Data
+/OrbitOne.BuildScreen/.vs/config/applicationhost.config
+/OrbitOne.BuildScreen/OrbitOne.BuildScreen/Log/Log.txt

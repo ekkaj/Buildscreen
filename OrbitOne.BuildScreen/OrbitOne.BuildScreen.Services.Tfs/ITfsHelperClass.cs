@@ -6,5 +6,6 @@ namespace OrbitOne.BuildScreen.Services.Tfs
     {
         TfsConfigurationServer GetTfsServer();
         string GetReportUrl(string tpc, string tp, string buildUri);
+        string GetImageUrl(string teamProjectCollectionUrl, string requestedByIdentifier);
     }
 }

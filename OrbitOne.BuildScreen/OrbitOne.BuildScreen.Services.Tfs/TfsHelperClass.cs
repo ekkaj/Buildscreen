@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net;
+using System.Text.RegularExpressions;
+using System.Web;
 using Microsoft.TeamFoundation.Client;
 using OrbitOne.BuildScreen.Configuration;
 
@@ -10,7 +12,9 @@ namespace OrbitOne.BuildScreen.Services.Tfs
         private readonly IServiceConfig _configurationTfsService;
 
         /* URL-part for a summary on Team Foundation Server */
-        private const string SummaryString = "/_build#_a=summary&buildUri=";
+        //Summary string for TFS 2015
+        private const string SummaryString = "/_build#_a=summary&buildId=";
+
         public TfsHelperClass(IServiceConfig configurationTfsService)
         {
             _configurationTfsService = configurationTfsService;
@@ -33,9 +37,19 @@ namespace OrbitOne.BuildScreen.Services.Tfs
             }
             return server;
         }
+
         public string GetReportUrl(string tpc, string tp, string buildUri)
         {
-            return tpc + "/" + tp + SummaryString + buildUri;
+            return tpc + "/" + tp + SummaryString + Regex.Match(buildUri, @"\d+").Value;
+        }
+
+        public string GetImageUrl(string teamProjectCollectionUrl, string requestedByIdentifier)
+        {
+            var identifier = HttpUtility.UrlEncode(requestedByIdentifier);
+
+            var path = string.Format("_api/_common/IdentityImage?id=&identifier={0}&resolveAmbiguous=false&identifierType=0&__v=5", identifier);
+            var imageUrl = teamProjectCollectionUrl + "/" + path;
+            return imageUrl;
         }
     }
 }

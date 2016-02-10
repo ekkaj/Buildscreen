@@ -139,7 +139,7 @@ namespace OrbitOne.BuildScreen.Services.Tfs
                         LastBuildTime = new TimeSpan(),
                         PassedNumberOfTests = 0,
                         RequestedByName = build.RequestedFor,
-                        RequestedByPictureUrl = "",
+                        RequestedByPictureUrl = _helperClass.GetImageUrl(teamProjectCollection.Uri.ToString(), build.Requests.First().RequestedFor),
                         StartBuildDateTime = build.StartTime,
                         Status = Char.ToLowerInvariant(build.Status.ToString()[0]) + build.Status.ToString().Substring(1),
                         TeamProject = teamProjectNode.Resource.DisplayName,
@@ -230,13 +230,34 @@ namespace OrbitOne.BuildScreen.Services.Tfs
             try
             {
                 var testProject = testService.GetTeamProject(teamProjectNode.Resource.DisplayName);
-                var testRun = testProject.TestRuns.ByBuild(build.Uri).FirstOrDefault();
 
-                if (testRun != null)
+                int passedTests = 0;
+                int totalTests = 0;
+                bool addTestResults = false;
+                foreach (var testRun in testProject.TestRuns.ByBuild(build.Uri))
                 {
-                    testResults.Add("PassedTests", testRun.PassedTests);
-                    testResults.Add("TotalTests", testRun.TotalTests);
+
+                    if (testRun != null)
+                    {
+                        passedTests += testRun.PassedTests;
+                        totalTests += testRun.TotalTests;
+                        addTestResults = true;
+                    }
                 }
+
+                if (addTestResults)
+                {
+                    testResults.Add("PassedTests", passedTests);
+                    testResults.Add("TotalTests", totalTests);
+                }
+
+                //var testRun = testProject.TestRuns.ByBuild(build.Uri);
+
+                //if (testRun != null)
+                //{
+                //    testResults.Add("PassedTests", testRun.PassedTests);
+                //    testResults.Add("TotalTests", testRun.TotalTests);
+                //}
             }
             catch (Exception e)
             {
