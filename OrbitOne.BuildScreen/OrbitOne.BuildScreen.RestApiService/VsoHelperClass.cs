@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -35,15 +36,17 @@ namespace OrbitOne.BuildScreen.RestApiService
 
             try
             {
-                using (var client = new HttpClient())
+                using (var client = CreateAuthenticationClient(_config.Uri, _config.Username, _config.Password))
                 {
+
+
                     client.BaseAddress = new Uri(_config.Uri);
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-                        Convert.ToBase64String(
-                            Encoding.ASCII.GetBytes(string.Format("{0}:{1}", _config.Username,
-                                _config.Password))));
+                    //client.DefaultRequestHeaders.Accept.Clear();
+                    //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                    //    Convert.ToBase64String(
+                    //        Encoding.ASCII.GetBytes(string.Format("{0}:{1}", _config.Username,
+                    //            _config.Password))));
 
                     client.Timeout = new TimeSpan(0, 3, 0);
 
@@ -75,14 +78,16 @@ namespace OrbitOne.BuildScreen.RestApiService
 
         public string ConvertReportUrl(string teamProjectName, string buildUri, Boolean summary)
         {
+            string collection = IsOnPremisesVSO(_config.Uri) ? string.Empty: "/DefaultCollection/";
+
             if (string.IsNullOrEmpty(buildUri))
             {
-                return _config.Uri + "/DefaultCollection/" + teamProjectName + "/_build";
+                return _config.Uri + collection + teamProjectName + "/_build";
             }
 
             var urlpart = (summary) ? SummaryString : LogString;
 
-            var firstPart = _config.Uri + "/DefaultCollection/" + teamProjectName + urlpart;
+            var firstPart = _config.Uri + collection + teamProjectName + urlpart;
             
             var lastIndexOf = buildUri.LastIndexOf("/");
             var number = "";
@@ -103,6 +108,33 @@ namespace OrbitOne.BuildScreen.RestApiService
 
             return firstPart + number;
         }
+
+        private bool IsOnPremisesVSO(string uri)
+        {
+            return !uri.Contains("visualstudio.com");
+        }
+
+        public HttpClient CreateAuthenticationClient(string uri, string username, string password)
+        {
+            if (IsOnPremisesVSO(uri))
+            {
+                var credentialCache = new CredentialCache();
+                credentialCache.Add(new Uri(uri), "NTLM", new NetworkCredential(username, password));
+                var httpClientHandler = new HttpClientHandler { Credentials = credentialCache };
+                return new HttpClient(httpClientHandler);
+            }
+
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes(string.Format("{0}:{1}", username, password))));
+
+            return client;
+
+        }
     }
+
+
 }
 

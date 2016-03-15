@@ -1,11 +1,11 @@
 ﻿<h1>Filters</h1>
 <hr />
 <h2>Teamproject Name</h2>
-<tags-input add-from-autocomplete-only="true" replace-spaces-with-dashes="false" placeholder="Include Team Project by name" on-tag-added="ListChanged()" on-tag-removed="ListChanged()" ng-model="TeamProjectTags">
+<tags-input min-length="1" add-from-autocomplete-only="true" replace-spaces-with-dashes="false" placeholder="Include Team Project by name" on-tag-added="ListChanged()" on-tag-removed="ListChanged()" ng-model="TeamProjectTags">
     <auto-complete debounce-delay="0" min-length="1" select-first-match="true" source="possibleTeamProjectTags($query)"></auto-complete>
 </tags-input>
 <h2>Buildname</h2>
-<tags-input add-from-autocomplete-only="true" replace-spaces-with-dashes="false" placeholder="Include build by name" on-tag-added="ListBuildNameTagsChanged()" on-tag-removed="ListBuildNameTagsChanged()" ng-model="BuilddefinitionTags">
+<tags-input min-length="1" add-from-autocomplete-only="true" replace-spaces-with-dashes="false" placeholder="Include build by name" on-tag-added="ListBuildNameTagsChanged()" on-tag-removed="ListBuildNameTagsChanged()" ng-model="BuilddefinitionTags">
     <auto-complete debounce-delay="0" min-length="1" select-first-match="true" source="possibleBuildNameTags($query)"></auto-complete>
 </tags-input>
 <h2>Date</h2>

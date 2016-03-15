@@ -259,16 +259,15 @@ namespace OrbitOne.BuildScreen.Configuration
         private static async Task<bool> CanLogIn(string username, string password, string uri, string configType)
         {
             bool response = false;
+
+            HttpClientHandler httpClientHandler = null;
             // VSO check
             if (configType == "VSO")
             {
-                using (var client = new HttpClient())
+                using (var client = CreateAuthenticationClient(uri, username, password))
                 {
                     client.BaseAddress = new Uri(uri);
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-                        Convert.ToBase64String(
-                            Encoding.ASCII.GetBytes(string.Format("{0}:{1}", username, password))));
+                    
                     Debug.WriteLine("Code: " + client.GetAsync("").Result.StatusCode);
                     response = client.GetAsync("").Result.StatusCode == HttpStatusCode.OK;
                 }
@@ -289,6 +288,31 @@ namespace OrbitOne.BuildScreen.Configuration
                 response = server.HasAuthenticated;
             }
             return response;
+        }
+
+        private static bool IsOnPremisesVSO(string uri)
+        {
+            return !uri.Contains("visualstudio.com");
+        }
+
+        private static HttpClient CreateAuthenticationClient(string uri, string username, string password)
+        {
+            if (IsOnPremisesVSO(uri))
+            {
+                var credentialCache = new CredentialCache();
+                credentialCache.Add(new Uri(uri), "NTLM", new NetworkCredential(username, password));
+                var httpClientHandler = new HttpClientHandler {  Credentials = credentialCache};
+                return new HttpClient(httpClientHandler);
+            }
+            
+            var client =new HttpClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes(string.Format("{0}:{1}", username, password))));
+            
+            return client;
+            
         }
     }
 

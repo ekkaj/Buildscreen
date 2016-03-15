@@ -79,7 +79,8 @@
         </fieldset>
 
         <fieldset class="form-fieldset ui-input">
-            <input type="url" name="vsoUrl" id="vso-url" ng-pattern="/^(https:\/\/)([\da-z\.\-]+)\.(visualstudio.com)$/" data-ng-model="newVsoConfig.Uri" tabindex="0" ng-blur="onBlur($event)" required />
+            <!--<input type="url" name="vsoUrl" id="vso-url" ng-pattern="/^(https:\/\/)([\da-z\.\-]+)\.(visualstudio.com)$/" data-ng-model="newVsoConfig.Uri" tabindex="0" ng-blur="onBlur($event)" required/>-->
+            <input type="url" name="vsoUrl" id="vso-url" data-ng-model="newVsoConfig.Uri" tabindex="0" ng-blur="onBlur($event)" required />
             <label for="vso-url">
                 <span data-text="VSO URL">VSO URL</span>
                 <span data-text="is not a valid url" ng-show="vsoForm.vsoUrl.$invalid && !vsoForm.vsoUrl.$pristine"> is not a valid url</span>
