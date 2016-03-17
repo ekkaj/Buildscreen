@@ -86,7 +86,7 @@ namespace OrbitOne.BuildScreen.RestApiService
 
                     if (build.Status.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.inProgress)))
                     {
-                        buildInfoDto.BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, build.Uri, false);
+                        buildInfoDto.BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, build.Uri, true);
                         var lastBuildTime = GetLastBuildTime(teamProjectName, build);
                         buildInfoDto.Status = StatusEnum.Statuses.inProgress.ToString();
                         if (lastBuildTime != null)
@@ -147,13 +147,8 @@ namespace OrbitOne.BuildScreen.RestApiService
             Build secondLastBuild = null;
             try
             {
-                secondLastBuild = _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetrieveLastSuccessfulBuildUrl, teamProjectName,
-                String.Format(_configurationRestService.BuildDefinitionUri, build.Definition.Id))).Result.FirstOrDefault()
-                  ??
-                  _helperClass.RetrieveTask<Build>(
-                      String.Format(_configurationRestService.RetriveLastPartiallyOrFailedUrl, teamProjectName,
-                          String.Format(_configurationRestService.BuildDefinitionUri, build.Definition.Id)))
-                      .Result.FirstOrDefault();
+                secondLastBuild = _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetrieveLastSuccessfulBuildUrl, teamProjectName, build.Definition.Id)).Result.FirstOrDefault() ??
+                                  _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetriveLastPartiallyOrFailedUrl, teamProjectName, build.Definition.Id)).Result.FirstOrDefault();
             }
             catch (Exception e)
             {
@@ -259,13 +254,13 @@ namespace OrbitOne.BuildScreen.RestApiService
 
                 if (latestBuild.Status.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.inProgress)))
                 {
-                    buildInfoDto.BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, latestBuild.Uri, false);
+                    buildInfoDto.BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, latestBuild.Uri, true);
                     buildInfoDto.Status = StatusEnum.Statuses.inProgress.ToString();
-                    var secondLastBuildList =
-                         _helperClass.RetrieveTask<Build>(
-                        (String.Format(_configurationRestService.RetrieveLastSuccessfulBuildUrl, teamProjectName, bdUri))).Result;
+                    var secondLastBuild = GetLastBuildTime(teamProjectName, latestBuild);
+                        // _helperClass.RetrieveTask<Build>(
+                        //(String.Format(_configurationRestService.RetrieveLastSuccessfulBuildUrl, teamProjectName, bdUri))).Result;
 
-                    var secondLastBuild = secondLastBuildList.FirstOrDefault();
+                    
                     if (secondLastBuild != null)
                     {
                         buildInfoDto.LastBuildTime = secondLastBuild.FinishTime - secondLastBuild.StartTime;

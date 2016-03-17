@@ -305,6 +305,7 @@
     <None Include="Properties\PublishProfiles\Buildscreen - Azure test.pubxml" />
     <None Include="Properties\PublishProfiles\BuildScreen File System.pubxml" />
     <None Include="Properties\PublishProfiles\LiveSites.pubxml" />
+    <None Include="Properties\PublishProfiles\testserver.pubxml" />
     <None Include="readme.txt" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Scripts\angular.min.js.map" />
