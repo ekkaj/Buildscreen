@@ -109,7 +109,7 @@ namespace OrbitOne.BuildScreen.RestApiService
             return firstPart + number;
         }
 
-        private bool IsOnPremisesVSO(string uri)
+        public bool IsOnPremisesVSO(string uri)
         {
             return !uri.Contains("visualstudio.com");
         }

@@ -23,7 +23,11 @@ namespace OrbitOne.BuildScreen.Services
                 if (dateString == null)
                 {
                     Debug.WriteLine("Lege datum, getbuildinfodtos");
-                    Parallel.ForEach(_services, service => allBuilds.AddRange(service.GetBuildInfoDtos()));
+                    //Parallel.ForEach(_services, service => allBuilds.AddRange(service.GetBuildInfoDtos()));
+                    foreach (var service in _services)
+                    {
+                        allBuilds.AddRange(service.GetBuildInfoDtos());
+                    }
                 }
                 else
                 {
