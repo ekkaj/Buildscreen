@@ -429,6 +429,8 @@ namespace OrbitOne.BuildScreen.Services.Tfs
 
                 if (testRuns.Any())
                 {
+                    
+
                     var totalTests = testRuns.Sum(x => x.TotalTests);
                     var totalPassedTests = testRuns.Sum(x => x.PassedTests);
 

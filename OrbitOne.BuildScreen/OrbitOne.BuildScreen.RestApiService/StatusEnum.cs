@@ -12,5 +12,11 @@ namespace OrbitOne.BuildScreen.RestApiService
             stopped,
             succeeded
         }
+
+        public enum RunStatisticsStatus
+        {
+            Passed,
+            Failed
+        }
     }
 }

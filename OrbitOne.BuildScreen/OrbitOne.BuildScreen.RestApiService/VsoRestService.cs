@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using OrbitOne.BuildScreen.Configuration;
 using OrbitOne.BuildScreen.Models;
 using OrbitOne.BuildScreen.Services;
@@ -94,19 +95,9 @@ namespace OrbitOne.BuildScreen.RestApiService
                             buildInfoDto.LastBuildTime = lastBuildTime.FinishTime - lastBuildTime.StartTime;
                         }
                     }
-                    if (
-                      build.Result != null &&
-                      build.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses),
-                            StatusEnum.Statuses.partiallySucceeded)))
-                    {
-                        var results = GetTestResults(teamProjectName, build.Uri);
-                        if (results != null)
-                        {
-                            buildInfoDto.TotalNumberOfTests = results.Count;
-                            buildInfoDto.PassedNumberOfTests =
-                                results.Count(r => r.Outcome.ToLower().Equals("passed"));
-                        }
-                    }
+
+                    TrySetTestResults(build, teamProjectName, buildInfoDto);
+                    
                     lock (dtos)
                     {
                         dtos.Add(buildInfoDto);
@@ -119,6 +110,19 @@ namespace OrbitOne.BuildScreen.RestApiService
                 throw;
             }
             return dtos;
+        }
+
+        private void TrySetTestResults(Build build, string teamProjectName, BuildInfoDto buildInfoDto)
+        {
+            if (build.Result != null &&
+                   (
+                   build.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.partiallySucceeded)) ||
+                   build.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.failed)) 
+                   )
+                   )
+            {
+                SetTestDetails(buildInfoDto, teamProjectName, build.Uri);
+            }
         }
 
         private IEnumerable<Build> GetPolledBuilds(string teamProjectName, DateTime finishTime)
@@ -265,19 +269,9 @@ namespace OrbitOne.BuildScreen.RestApiService
                     {
                         buildInfoDto.LastBuildTime = secondLastBuild.FinishTime - secondLastBuild.StartTime;
                     }
-
                 }
-                if (latestBuild.Result != null &&
-                    latestBuild.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.partiallySucceeded)))
-                {
-                    var results = GetTestResults(teamProjectName, latestBuild.Uri);
-                    if (results != null)
-                    {
-                        buildInfoDto.TotalNumberOfTests = results.Count;
-                        buildInfoDto.PassedNumberOfTests =
-                            results.Count(r => r.Outcome.ToLower().Equals("passed"));
-                    }
-                }
+                
+                TrySetTestResults(latestBuild, teamProjectName, buildInfoDto);
             }
             catch (Exception e)
             {
@@ -294,7 +288,7 @@ namespace OrbitOne.BuildScreen.RestApiService
             try
             {
                 var runs =
-                _helperClass.RetrieveTask<Test>(String.Format(_configurationRestService.RetrieveRunsAsyncUrl, teamProjectName, buildUri))
+                _helperClass.RetrieveTask<Test>(String.Format(_configurationRestService.RetrieveRunsAsyncUrl, teamProjectName, HttpUtility.UrlEncode(buildUri)))
                 .Result;
                 if (!runs.Any()) return null;
                 var runResult = runs.Max(t => t.Id);
@@ -309,6 +303,52 @@ namespace OrbitOne.BuildScreen.RestApiService
             return result;
         }
 
-      
+        private void SetTestDetails(BuildInfoDto buildInfoDto, string teamProjectName, string buildUri)
+        {
+            var readOnlyCollection = GetTestRunDetails(teamProjectName, buildUri);
+
+            var totalPassedTests = 0;
+            var totalNumberOfTests = 0;
+
+
+            if (readOnlyCollection.All(x => x.RunStatistics != null))
+            {
+                var runStatisticses = readOnlyCollection.SelectMany(x => x.RunStatistics).ToList();
+                totalPassedTests = runStatisticses.Where(x => x.Outcome == StatusEnum.RunStatisticsStatus.Passed.ToString()).Sum(x => x.Count);
+                totalNumberOfTests = runStatisticses.Sum(x => x.Count);
+            }
+            else
+            {
+                totalPassedTests = readOnlyCollection.Sum(x => x.PassedTests);
+                totalNumberOfTests = readOnlyCollection.Sum(x => x.TotalTests);
+            }
+
+            buildInfoDto.TotalNumberOfTests = totalNumberOfTests;
+            buildInfoDto.PassedNumberOfTests = totalPassedTests;
+            if (totalNumberOfTests > 0 && totalNumberOfTests != totalPassedTests)
+            {
+                buildInfoDto.Status = StatusEnum.Statuses.partiallySucceeded.ToString();
+            }
+        }
+
+        private IReadOnlyCollection<Test> GetTestRunDetails(string teamProjectName, string buildUri)
+        {
+            try
+            {
+                var runsTask =
+                _helperClass.RetrieveTask<Test>(String.Format(_configurationRestService.RetrieveRunsAsyncUrl, teamProjectName, HttpUtility.UrlEncode(buildUri)));
+                runsTask.Wait();
+                var runs = runsTask.Result;
+                return runs;
+            }
+            catch (Exception e)
+            {
+                LogService.WriteError(e);
+                throw;
+            }
+            
+        }
+
+
     }
 }

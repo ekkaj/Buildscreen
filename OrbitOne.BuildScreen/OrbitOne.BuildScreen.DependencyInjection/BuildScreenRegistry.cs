@@ -28,6 +28,7 @@ namespace OrbitOne.BuildScreen.DependencyInjection
                             Component.For<IHelperClass>()
                                 .ImplementedBy<VsoHelperClass>()
                                 .DependsOn(Dependency.OnValue<IServiceConfig>(config)).Named("HelperClass" + i));
+
                         var instanceVso = container.Resolve<IHelperClass>("HelperClass" + i);
                         container.Register(
                             Component.For<IService>().ImplementedBy<VsoRestService>().DependsOn(Dependency.OnValue<IHelperClass>(instanceVso)).Named("VsoRestService"+i));

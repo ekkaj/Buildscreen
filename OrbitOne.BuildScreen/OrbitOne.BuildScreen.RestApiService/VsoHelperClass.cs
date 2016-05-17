@@ -50,7 +50,7 @@ namespace OrbitOne.BuildScreen.RestApiService
 
                     client.Timeout = new TimeSpan(0, 3, 0);
 
-                    var response = await client.GetAsync(HttpUtility.UrlPathEncode(formattedUrl)).ConfigureAwait(continueOnCapturedContext: false);
+                    var response = await client.GetAsync(formattedUrl).ConfigureAwait(continueOnCapturedContext: false);
 
                     if (response.IsSuccessStatusCode)
                     {
