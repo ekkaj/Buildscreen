@@ -465,7 +465,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OrbitOne.BuildScreen.Configuration\OrbitOne.BuildScreen.Configuration.csproj">
-      <Project>{28B2602A-F3AA-47E5-ADB5-A699CC2982CD}</Project>
+      <Project>{28b2602a-f3aa-47e5-adb5-a699cc2982cd}</Project>
       <Name>OrbitOne.BuildScreen.Configuration</Name>
     </ProjectReference>
     <ProjectReference Include="..\OrbitOne.BuildScreen.DependencyInjection\OrbitOne.BuildScreen.DependencyInjection.csproj">

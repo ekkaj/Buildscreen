@@ -61,7 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OrbitOne.BuildScreen.Services\OrbitOne.BuildScreen.Services.csproj">
-      <Project>{0B712711-DD70-43E8-AE87-92CE662B97B5}</Project>
+      <Project>{0b712711-dd70-43e8-ae87-92ce662b97b5}</Project>
       <Name>OrbitOne.BuildScreen.Services</Name>
     </ProjectReference>
   </ItemGroup>
