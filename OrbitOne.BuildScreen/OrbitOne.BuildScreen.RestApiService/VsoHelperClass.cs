@@ -38,9 +38,8 @@ namespace OrbitOne.BuildScreen.RestApiService
             {
                 using (var client = CreateAuthenticationClient(_config.Uri, _config.Username, _config.Password))
                 {
-
-
-                    client.BaseAddress = new Uri(_config.Uri);
+                    var baseAddress = new Uri(_config.Uri);
+                    client.BaseAddress = baseAddress;
                     //client.DefaultRequestHeaders.Accept.Clear();
                     //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
@@ -49,6 +48,10 @@ namespace OrbitOne.BuildScreen.RestApiService
                     //            _config.Password))));
 
                     client.Timeout = new TimeSpan(0, 3, 0);
+
+
+
+                    LogService.WriteDebug($"GET:  {new Uri(baseAddress, formattedUrl)}");
 
                     var response = await client.GetAsync(formattedUrl).ConfigureAwait(continueOnCapturedContext: false);
 

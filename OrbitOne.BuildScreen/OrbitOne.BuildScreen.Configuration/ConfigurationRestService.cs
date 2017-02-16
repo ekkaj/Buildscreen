@@ -8,8 +8,10 @@ namespace OrbitOne.BuildScreen.Configuration
         public string RetrieveProjectsAsyncUrl { get { return this["RetrieveProjectsAsyncUrl"].ToString(); } }
         [ConfigurationProperty("RetrieveBuildsOnFinishtime", IsRequired = true)]
         public string RetrieveBuildsOnFinishtime { get { return this["RetrieveBuildsOnFinishtime"].ToString(); } }
+        [ConfigurationProperty("RetrieveBuildsOnFinishtimeXamlBuilds", IsRequired = true)]
+        public string RetrieveBuildsOnFinishtimeXamlBuilds { get { return this["RetrieveBuildsOnFinishtimeXamlBuilds"].ToString(); } }
         [ConfigurationProperty("RetrieveBuildsInProgress", IsRequired = true)]
-        public string RetrieveBuildsInProgress { get { return this["RetrieveBuildsInProgress"].ToString(); } }
+        public string RetrieveBuildsInProgress { get { return this["RetrieveBuildsInProgress"].ToString();  } }
         [ConfigurationProperty("RetrieveLastBuildAsyncUrl", IsRequired = true)]
         public string RetrieveLastBuildAsyncUrl { get { return this["RetrieveLastBuildAsyncUrl"].ToString(); } }
         [ConfigurationProperty("RetrieveLastSuccessfulBuildUrl", IsRequired = true)]

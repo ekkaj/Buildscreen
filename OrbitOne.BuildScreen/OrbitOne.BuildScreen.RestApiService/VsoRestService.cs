@@ -18,7 +18,7 @@ namespace OrbitOne.BuildScreen.RestApiService
         /* This contrains the amount of parallel tasks, because there is nested
          * parallelism, there is a need to constrain this number. Testing has pointed out
          * that 4 is the best solution */
-        private const int DegreeOfParallelism = 4;
+        private int DegreeOfParallelism = 1;
 
         public VsoRestService(IConfigurationRestService configurationRestService, IHelperClass helperClass)
         {
@@ -28,15 +28,26 @@ namespace OrbitOne.BuildScreen.RestApiService
 
         public List<BuildInfoDto> GetBuildInfoDtosPolling(String finishTimePoll)
         {
+            
+
             var dtoPollList = new List<BuildInfoDto>();
+            
             try
             {
                 var sinceDateTime = DateTime.Now.Subtract(new TimeSpan(int.Parse(finishTimePoll), 0, 0)).ToUniversalTime();
 
                 var teamProjects = _helperClass.RetrieveTask<TeamProject>(_configurationRestService.RetrieveProjectsAsyncUrl).Result;
+                var allBuildDefinitions = new List<BuildDefinition>();
+
+                foreach (var teamProject in teamProjects)
+                {
+                    var buildDefinitions = GetAllBuildDefintions(teamProject.Name);
+                    allBuildDefinitions.AddRange(buildDefinitions);
+                }
+
                 Parallel.ForEach(teamProjects, new ParallelOptions { MaxDegreeOfParallelism = DegreeOfParallelism }, teamProject =>
                 {
-                    var tempListOfBuildsPerTeamProject = GetBuildsForPollingSince(teamProject.Name, teamProject.Id, sinceDateTime).ToList();
+                    var tempListOfBuildsPerTeamProject = GetBuildsForPollingSince(teamProject.Name, teamProject.Id, sinceDateTime, allBuildDefinitions).ToList();
                     tempListOfBuildsPerTeamProject = tempListOfBuildsPerTeamProject.GroupBy(b => b.Id)
                         .Select(b => b.OrderByDescending(d => d.StartBuildDateTime).FirstOrDefault())
                         .ToList();
@@ -57,12 +68,12 @@ namespace OrbitOne.BuildScreen.RestApiService
             return dtoPollList;
         }
 
-        private IEnumerable<BuildInfoDto> GetBuildsForPollingSince(string teamProjectName, string teamProjectId, DateTime finishTime)
+        private IEnumerable<BuildInfoDto> GetBuildsForPollingSince(string teamProjectName, string teamProjectId, DateTime finishTime, List<BuildDefinition> buildDefinitions)
         {
             List<BuildInfoDto> dtos = new List<BuildInfoDto>();
             try
             {
-                var polledBuilds = GetPolledBuilds(teamProjectName, finishTime);
+                var polledBuilds = GetPolledBuilds(teamProjectName, finishTime, buildDefinitions);
                 Parallel.ForEach(polledBuilds, new ParallelOptions { MaxDegreeOfParallelism = DegreeOfParallelism }, build =>
                 {
                     var buildInfoDto = new BuildInfoDto
@@ -72,8 +83,8 @@ namespace OrbitOne.BuildScreen.RestApiService
                         Builddefinition = build.Definition.Name,
                         StartBuildDateTime = build.StartTime,
                         FinishBuildDateTime = build.FinishTime,
-                        RequestedByName = build.RequestedFor.DisplayName,
-                        RequestedByPictureUrl = build.RequestedFor.ImageUrl + "&size=2",
+                        RequestedByName = GetRequestedForName(build),
+                        RequestedByPictureUrl = GetRequestedForImageUrl(build) + "&size=2",
                         TotalNumberOfTests = 0,
                         PassedNumberOfTests = 0,
                         BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, build.Uri, true),
@@ -112,39 +123,106 @@ namespace OrbitOne.BuildScreen.RestApiService
             return dtos;
         }
 
+        private string GetRequestedForName(Build build)
+        {
+            if (build.RequestedFor != null)
+            {
+                return build.RequestedFor.DisplayName;
+            }
+            if (build.Requests != null && build.Requests.Any())
+            {
+                return build.Requests.First().RequestedFor.DisplayName;
+            }
+            return null;
+        }
+
+        private string GetRequestedForImageUrl(Build build)
+        {
+            if (build.RequestedFor != null)
+            {
+                return build.RequestedFor.ImageUrl;
+            }
+            if (build.Requests != null && build.Requests.Any())
+            {
+                return build.Requests.First().RequestedFor.ImageUrl;
+            }
+            return null;
+        }
+
         private void TrySetTestResults(Build build, string teamProjectName, BuildInfoDto buildInfoDto)
         {
-            if (build.Result != null &&
+            if ((build.Result != null &&
                    (
                    build.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.partiallySucceeded)) ||
                    build.Result.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.failed)) 
-                   )
+                   )) || build.Result == null && build.Status.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.partiallySucceeded))
                    )
             {
                 SetTestDetails(buildInfoDto, teamProjectName, build.Uri);
             }
         }
 
-        private IEnumerable<Build> GetPolledBuilds(string teamProjectName, DateTime finishTime)
+        private IEnumerable<Build> GetPolledBuilds(string teamProjectName, DateTime finishTime, List<BuildDefinition> buildDefinitions)
         {
             var polledBuilds = new List<Build> { };
             try
             {
-                var onFinishTimeBuilds = _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetrieveBuildsOnFinishtime,
-                teamProjectName, String.Format(_configurationRestService.HourFormatRest, finishTime.Year, finishTime.Month, finishTime.Day, finishTime.Hour, finishTime.Minute))).Result;
+                var finishTimeMonth = finishTime.Month.ToString().Length == 1 ? "0" + finishTime.Month : finishTime.Month.ToString();
+                var finishTimeDay = finishTime.Day.ToString().Length == 1 ? "0" + finishTime.Day : finishTime.Day.ToString();
+                
+                var finishTimeHour = finishTime.Hour.ToString().Length == 1 ? "0" + finishTime.Hour : finishTime.Hour.ToString();
+                var finishTimeMinute = finishTime.Minute.ToString().Length == 1 ? "0" + finishTime.Minute : finishTime.Minute.ToString();
+
+                var dateTimeFormat = String.Format(_configurationRestService.HourFormatRest, finishTime.Year, finishTimeMonth,
+                    finishTimeDay, finishTimeHour, finishTimeMinute);
+
+                var retrieveBuildsOnFinishtimeUri = String.Format(_configurationRestService.RetrieveBuildsOnFinishtime,
+                    teamProjectName, dateTimeFormat, string.Join(",", buildDefinitions.Where(x => x.Type == "build").Select(x => x.Id)));
+
+                var retrieveBuildsOnFinishtimeXamlBuildsUri = String.Format(_configurationRestService.RetrieveBuildsOnFinishtimeXamlBuilds,
+                    teamProjectName, dateTimeFormat, string.Join(",", buildDefinitions.Where(x => x.Type == "xaml").Select(x => x.Id)));
+
+                var onFinishTimeBuilds = _helperClass.RetrieveTask<Build>(retrieveBuildsOnFinishtimeUri).Result;
+                var onFinishTimeXamlBuilds = _helperClass.RetrieveTask<Build>(retrieveBuildsOnFinishtimeXamlBuildsUri).Result;
+
                 var inProgressBuilds =
                     _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetrieveBuildsInProgress,
                         teamProjectName)).Result;
                 polledBuilds.AddRange(onFinishTimeBuilds);
+                polledBuilds.AddRange(onFinishTimeXamlBuilds);
                 polledBuilds.AddRange(inProgressBuilds);
+
+                
             }
             catch (Exception e)
             {
                 LogService.WriteError(e);
                 throw;
             }
-            return polledBuilds;
+            //return polledBuilds;
+             return GetMostSignificantBuilds(polledBuilds);
+            
         }
+
+        private IEnumerable<Build> GetMostSignificantBuilds(IEnumerable<Build> builds)
+        {
+            foreach (var buildsByDefinition in builds.GroupBy(x =>x .Definition.Id))
+            {
+                if (buildsByDefinition.Any(x => x.Status.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.inProgress))))
+                {
+                    yield return buildsByDefinition.Where(x => x.Status.Equals(Enum.GetName(typeof(StatusEnum.Statuses), StatusEnum.Statuses.inProgress))).OrderByDescending(x => x.StartTime).First();
+                }
+                else
+                {
+                    yield return buildsByDefinition.OrderByDescending(x => x.StartTime).First();
+                }
+                
+                
+            }
+        }
+
+        
+
 
         private Build GetLastBuildTime(string teamProjectName, Build build)
         {
@@ -174,7 +252,7 @@ namespace OrbitOne.BuildScreen.RestApiService
                 {
                     lock (dtoList)
                     {
-                        dtoList.AddRange(GetBuildDefinitions(teamProject.Name, teamProject.Id).ToList());
+                        dtoList.AddRange(GetBuildInfoDtos(teamProject.Name, teamProject.Id).ToList());
                     }
                 });
                 if (!dtoList.Any())
@@ -191,18 +269,25 @@ namespace OrbitOne.BuildScreen.RestApiService
             return dtoList;
         }
 
-        private IEnumerable<BuildInfoDto> GetBuildDefinitions(string teamProjectName, string teamProjectId)
+        private IEnumerable<BuildDefinition> GetAllBuildDefintions(string teamProjectName)
         {
-            var dtoList = new List<BuildInfoDto> { };
-            try
-            {
-                var builddefinitions = _helperClass.RetrieveTask<BuildDefinition>(
+            var buildDefinitions = _helperClass.RetrieveTask<BuildDefinition>(
                 String.Format(_configurationRestService.RetrieveBuildDefinitionsUrl, teamProjectName))
                 .Result
                 .Where(b => b.QueueStatus == null || !b.QueueStatus.Equals("disabled")) //it only returns a status when it's disabled (not tested for paused yet)
                 .ToList();
 
-                Parallel.ForEach(builddefinitions, new ParallelOptions { MaxDegreeOfParallelism = DegreeOfParallelism }, bd =>
+            return buildDefinitions;
+        }
+
+        private IEnumerable<BuildInfoDto> GetBuildInfoDtos(string teamProjectName, string teamProjectId)
+        {
+            var dtoList = new List<BuildInfoDto> { };
+            try
+            {
+                var buildDefinitions = GetAllBuildDefintions(teamProjectName);
+
+                Parallel.ForEach(buildDefinitions, new ParallelOptions { MaxDegreeOfParallelism = DegreeOfParallelism }, bd =>
                 {
                     var dto = GetLatestBuild(teamProjectName, bd.Id, bd.Uri, bd.Name, teamProjectId);
                     if (dto != null)
@@ -229,12 +314,15 @@ namespace OrbitOne.BuildScreen.RestApiService
             BuildInfoDto buildInfoDto = null;
             try
             {
-                var latestBuild =
-                    _helperClass
-                        .RetrieveTask<Build>(
+                var latestBuilds = _helperClass
+                    .RetrieveTask<Build>(
                         (String.Format(_configurationRestService.RetrieveLastBuildAsyncUrl, teamProjectName, bdId)))
-                        .Result
+                    .Result;
+
+                
+                var latestBuild =latestBuilds.OrderByDescending(x => x.StartTime)
                         .FirstOrDefault();
+
                 if (latestBuild == null) return null;
                 buildInfoDto = new BuildInfoDto
                 {
@@ -260,14 +348,11 @@ namespace OrbitOne.BuildScreen.RestApiService
                 {
                     buildInfoDto.BuildReportUrl = _helperClass.ConvertReportUrl(teamProjectName, latestBuild.Uri, true);
                     buildInfoDto.Status = StatusEnum.Statuses.inProgress.ToString();
-                    var secondLastBuild = GetLastBuildTime(teamProjectName, latestBuild);
-                        // _helperClass.RetrieveTask<Build>(
-                        //(String.Format(_configurationRestService.RetrieveLastSuccessfulBuildUrl, teamProjectName, bdUri))).Result;
 
-                    
-                    if (secondLastBuild != null)
+                    TimeSpan latestBuildTimeSpan;
+                    if (TryGetLastBuildTimeSpan(teamProjectName, latestBuild, out latestBuildTimeSpan))
                     {
-                        buildInfoDto.LastBuildTime = secondLastBuild.FinishTime - secondLastBuild.StartTime;
+                        buildInfoDto.LastBuildTime = latestBuildTimeSpan;
                     }
                 }
                 
@@ -281,6 +366,21 @@ namespace OrbitOne.BuildScreen.RestApiService
 
             return buildInfoDto;
         }
+
+        private bool TryGetLastBuildTimeSpan(string teamProjectName, Build latestBuild,  out TimeSpan lastBuildTimeSpan)
+        {
+            var secondLastBuild = GetLastBuildTime(teamProjectName, latestBuild);
+
+            if (secondLastBuild != null)
+            {
+                lastBuildTimeSpan = secondLastBuild.FinishTime - secondLastBuild.StartTime;
+                return true;
+            }
+
+            lastBuildTimeSpan  = TimeSpan.Zero;
+            return false;
+        }
+        
 
         private IReadOnlyCollection<TestResult> GetTestResults(string teamProjectName, string buildUri)
         {

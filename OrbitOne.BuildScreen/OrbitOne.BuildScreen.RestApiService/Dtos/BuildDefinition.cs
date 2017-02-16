@@ -6,5 +6,6 @@
         public string Id { get; set; }
         public string QueueStatus { get; set; }
         public string Uri { get; set; }
+        public string Type { get; set; }
     }
 }

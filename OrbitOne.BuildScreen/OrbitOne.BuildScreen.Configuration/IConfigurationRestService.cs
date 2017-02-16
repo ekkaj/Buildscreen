@@ -4,6 +4,7 @@
     {
         string RetrieveProjectsAsyncUrl { get; }
         string RetrieveBuildsOnFinishtime { get; }
+        string RetrieveBuildsOnFinishtimeXamlBuilds { get; }
         string RetrieveBuildsInProgress { get; }
         string RetrieveLastBuildAsyncUrl { get; }
         string RetrieveLastSuccessfulBuildUrl { get; }

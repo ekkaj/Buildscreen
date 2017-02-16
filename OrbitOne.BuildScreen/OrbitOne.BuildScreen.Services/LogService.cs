@@ -11,6 +11,11 @@ namespace OrbitOne.BuildScreen.Services
         {
             Logger.Info(message);
         }
+        
+        public static void WriteDebug(string message)
+        {
+            Logger.Debug(message);
+        }
 
         public static void WriteError(Exception ex)
         {
