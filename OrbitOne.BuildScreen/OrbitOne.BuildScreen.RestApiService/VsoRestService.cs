@@ -188,6 +188,8 @@ namespace OrbitOne.BuildScreen.RestApiService
                 var inProgressBuilds =
                     _helperClass.RetrieveTask<Build>(String.Format(_configurationRestService.RetrieveBuildsInProgress,
                         teamProjectName)).Result;
+                inProgressBuilds = inProgressBuilds.Where(x => x.FinishTime == default(DateTime)).ToArray();
+
                 polledBuilds.AddRange(onFinishTimeBuilds);
                 polledBuilds.AddRange(onFinishTimeXamlBuilds);
                 polledBuilds.AddRange(inProgressBuilds);
